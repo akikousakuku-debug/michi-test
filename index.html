@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROFILE - MICHI</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Italiana&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #333333;
+            --text-body: #444444;
+            --accent-pink: #ff8cb6;
+            --accent-blue: #70e8e0;
+            --accent-gold: #f0d550;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            color: var(--primary-color);
+            overflow: hidden;
+            height: 100vh;
+            line-height: 1.8;
+        }
+
+        body.loaded {
+            overflow-y: auto; 
+            height: auto;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1), 
+                        transform 1s cubic-bezier(0.4, 0, 0.2, 1),
+                        visibility 1s;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(1.05);
+        }
+
+        .loading-logo {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 3.5rem;
+            color: var(--accent-pink);
+            margin-bottom: 1.5rem;
+            text-shadow: 0px 4px 15px rgba(255, 140, 182, 0.2);
+        }
+
+        .loading-bar-container {
+            width: 200px;
+            height: 3px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-pink));
+            transition: width 0.3s ease;
+        }
+        
+        .loading-text {
+            margin-top: 1rem;
+            font-family: 'Italiana', serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.3em;
+            color: #aaa;
+        }
+
+        /* Background Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Main Content Layout */
+        .page-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+        
+        .page-container.visible {
+            opacity: 1;
+        }
+
+        section {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 6rem 1.5rem;
+        }
+
+        .section-title {
+            font-family: 'Italiana', serif;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            margin-bottom: 3.5rem;
+            background: linear-gradient(45deg, var(--accent-pink), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            display: inline-block;
+        }
+        
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 2rem 3rem;
+            z-index: 100;
+            display: flex;
+            gap: 2rem;
+            opacity: 0;
+            transition: opacity 1s ease 1s;
+        }
+        .loaded nav { opacity: 1; }
+
+        .nav-item {
+            text-decoration: none;
+            color: var(--primary-color);
+            font-family: 'Italiana', serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.1em;
+            transition: color 0.3s;
+            font-weight: 600;
+        }
+        .nav-item:hover { color: var(--accent-pink); }
+
+        /* Hero Section */
+        .hero-section {
+            height: 100vh;
+            text-align: center;
+            padding: 0;
+        }
+
+        .hero-content {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1.8s cubic-bezier(0.2, 1, 0.3, 1) 0.5s;
+        }
+        .loaded .hero-content {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hero-logo {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: var(--accent-pink);
+            letter-spacing: 0.2em;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .hero-title {
+            font-family: 'Italiana', serif;
+            font-size: clamp(4rem, 15vw, 10rem);
+            font-weight: 400;
+            line-height: 0.85;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-desc {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            letter-spacing: 0.15em;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Italiana', serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.3em;
+            color: var(--accent-pink);
+            font-weight: bold;
+            animation: bounce 2s infinite;
+            opacity: 0;
+            transition: opacity 1s ease 1.5s;
+        }
+        .loaded .scroll-hint { opacity: 1; }
+
+        /* About Section */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 4rem;
+            width: 100%;
+            max-width: 960px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 4rem;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 1.2s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+
+        .glass-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .profile-img-wrapper {
+            flex: 1;
+            aspect-ratio: 4/5;
+            overflow: hidden;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .profile-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 1s ease;
+        }
+
+        .profile-text {
+            flex: 1.2;
+        }
+
+        .profile-name {
+            font-family: 'Italiana', serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-role {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 1.1rem;
+            color: var(--accent-pink);
+            margin-bottom: 2rem;
+            display: block;
+            font-weight: 700;
+        }
+
+        .profile-desc {
+            font-size: 1.05rem;
+            color: var(--text-body);
+            line-height: 2;
+        }
+
+        @media (max-width: 800px) {
+            .glass-card {
+                flex-direction: column;
+                padding: 2.5rem;
+                gap: 2rem;
+            }
+            nav { padding: 1.5rem; gap: 1rem; }
+        }
+
+        /* Favorites Section */
+        .slider-section {
+            background: linear-gradient(to bottom, transparent, rgba(255, 140, 182, 0.05));
+            overflow: hidden;
+        }
+
+        .slider-container {
+            width: 100%;
+            max-width: 1200px;
+            position: relative;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            transition: transform 0.8s cubic-bezier(0.2, 1, 0.3, 1);
+            padding: 2rem 0;
+        }
+
+        .slide {
+            min-width: 100%;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: center;
+            opacity: 0.3;
+            transform: scale(0.9);
+            transition: all 0.8s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+        
+        .slide.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .work-card {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem;
+            display: flex;
+            gap: 3rem;
+            width: 100%;
+            max-width: 1000px;
+            align-items: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+        }
+
+        .work-img-area {
+            flex: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+        }
+
+        .work-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .work-info { flex: 1; }
+
+        .work-cat {
+            color: var(--accent-blue);
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .work-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .slider-controls {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            border: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.2rem;
+            color: var(--accent-pink);
+        }
+        .nav-btn:hover {
+            background: var(--accent-pink);
+            color: white;
+            border-color: var(--accent-pink);
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .work-card { flex-direction: column; padding: 2rem; gap: 1.5rem; }
+        }
+
+        /* Contact Section */
+        .contact-form-wrapper {
+            background: white;
+            padding: 4rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.05);
+            text-align: center;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+        .contact-form-wrapper.visible { opacity: 1; transform: translateY(0); }
+
+        .form-row { margin-bottom: 1.5rem; text-align: left; }
+        .form-label { display: block; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent-pink); font-family: 'Italiana', serif; }
+        .form-control {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .form-control:focus { outline: none; border-color: var(--accent-pink); }
+
+        .submit-btn {
+            background: var(--accent-pink);
+            color: white;
+            border: none;
+            padding: 1rem 4rem;
+            border-radius: 50px;
+            font-family: 'Italiana', serif;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+            font-weight: 700;
+        }
+        .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255, 140, 182, 0.3); }
+
+        footer {
+            margin-top: 5rem;
+            padding: 2rem;
+            font-family: 'Italiana', serif;
+            color: #999;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, 15px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="loading-logo">MICHI</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar" id="loading-bar"></div>
+        </div>
+        <p class="loading-text">ARTISTRY IN MOTION</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="page-container">
+
+        <nav>
+            <a href="#about" class="nav-item">About</a>
+            <a href="#works" class="nav-item">Favorites</a>
+            <a href="#contact" class="nav-item">Contact</a>
+        </nav>
+
+        <section class="hero-section">
+            <div class="hero-content">
+                <span class="hero-logo">MICHI OFFICIAL</span>
+                <h1 class="hero-title">BEYOND<br>THE GLASS</h1>
+                <p class="hero-desc">
+                    ハッピーもスイーツも🎵モリモリくらいがちょうどいい！✨<br>
+                    Daily moments, colorful inspirations.
+                </p>
+            </div>
+            <div class="scroll-hint">EXPLORE</div>
+        </section>
+
+        <section id="about">
+            <h2 class="section-title">About Me</h2>
+            <div class="glass-card scroll-anim">
+                <div class="profile-img-wrapper">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=600" alt="Profile" class="profile-img">
+                </div>
+                <div class="profile-text">
+                    <h3 class="profile-name">MICHI</h3>
+                    <span class="profile-role">Digital Creator & Gourmet Lover</span>
+                    <p class="profile-desc">
+                        日常の中に見つける「キラキラ」を大切にしています。<br>
+                        美味しいものを食べている時と、新しいネイルを眺めている時が一番幸せな瞬間です。<br>
+                        この場所では、私の大好きなものたちを少しずつシェアしていきます。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="works" class="slider-section">
+            <h2 class="section-title">My Favorites</h2>
+            <div class="slider-container">
+                <div class="slider-wrapper" id="sliderWrapper">
+                    
+                    <div class="slide active">
+                        <div class="work-card">
+                            <div class="work-img-area">
+                                <img src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&q=80&w=600" alt="Sweets" class="work-img">
+                            </div>
+                            <div class="work-info">
+                                <span class="work-cat">Culture</span>
+                                <h3 class="work-title">デカ盛りスイーツ</h3>
+                                <p class="work-desc">「美味しいものは正義！」をモットーに、都内の話題のスイーツショップを巡っています。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slide">
+                        <div class="work-card">
+                            <div class="work-img-area">
+                                <img src="https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&q=80&w=600" alt="Nail Art" class="work-img">
+                            </div>
+                            <div class="work-info">
+                                <span class="work-cat">Fashion</span>
+                                <h3 class="work-title">キラキラネイル</h3>
+                                <p class="work-desc">指先から始まるハッピー。季節に合わせたカラーとグリッターで毎日を彩ります。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slide">
+                        <div class="work-card">
+                            <div class="work-img-area">
+                                <img src="https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&q=80&w=600" alt="Night View" class="work-img">
+                            </div>
+                            <div class="work-info">
+                                <span class="work-cat">Scenery</span>
+                                <h3 class="work-title">都会の夜景</h3>
+                                <p class="work-desc">レインボーブリッジの夜景は、心をリセットしてくれる特別なエネルギー源です。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="slider-controls">
+                    <div class="nav-btn" id="prevBtn">←</div>
+                    <div class="nav-btn" id="nextBtn">→</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact">
+            <h2 class="section-title">Contact</h2>
+            <div class="contact-form-wrapper scroll-anim">
+                <p style="margin-bottom: 2rem; color: #666;">お気軽にメッセージをお送りください</p>
+                <form id="contactForm">
+                    <div class="form-row">
+                        <label class="form-label">NAME</label>
+                        <input type="text" class="form-control" placeholder="Your Name" required>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">EMAIL</label>
+                        <input type="email" class="form-control" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">MESSAGE</label>
+                        <textarea class="form-control" rows="4" placeholder="How can I help you?" required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">SEND MESSAGE</button>
+                </form>
+            </div>
+            <footer>
+                &copy; 2026 MICHI. ALL RIGHTS RESERVED.
+            </footer>
+        </section>
+
+    </div>
+
+    <script>
+        // --- Loading Simulation ---
+        window.addEventListener('load', () => {
+            const bar = document.getElementById('loading-bar');
+            const screen = document.getElementById('loading-screen');
+            const container = document.querySelector('.page-container');
+            const body = document.body;
+
+            let width = 0;
+            const interval = setInterval(() => {
+                width += Math.random() * 30;
+                if (width >= 100) {
+                    width = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        screen.classList.add('hidden');
+                        container.classList.add('visible');
+                        body.classList.add('loaded');
+                    }, 500);
+                }
+                bar.style.width = width + '%';
+            }, 150);
+        });
+
+        // --- Scroll Animations ---
+        const observerOptions = { threshold: 0.2 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.scroll-anim').forEach(el => observer.observe(el));
+
+        // --- Slider Logic ---
+        const wrapper = document.getElementById('sliderWrapper');
+        const slides = document.querySelectorAll('.slide');
+        const nextBtn = document.getElementById('nextBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        let currentIdx = 0;
+
+        function updateSlider() {
+            slides.forEach((slide, i) => {
+                slide.classList.toggle('active', i === currentIdx);
+            });
+            wrapper.style.transform = `translateX(-${currentIdx * 100}%)`;
+        }
+
+        nextBtn.addEventListener('click', () => {
+            currentIdx = (currentIdx + 1) % slides.length;
+            updateSlider();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            currentIdx = (currentIdx - 1 + slides.length) % slides.length;
+            updateSlider();
+        });
+
+        // --- Three.js Background Simulation ---
+        let renderer, scene, camera, simMaterial, drawMaterial;
+        let targetA, targetB, simScene, drawScene;
+        const clock = new THREE.Clock();
+        const mouse = new THREE.Vector2(-1, -1);
+        let isMoving = 0;
+
+        function initFluid() {
+            const container = document.getElementById('canvas-container');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(width, height);
+            container.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+            const options = { format: THREE.RGBAFormat, type: THREE.FloatType };
+            targetA = new THREE.WebGLRenderTarget(width, height, options);
+            targetB = new THREE.WebGLRenderTarget(width, height, options);
+
+            const simFS = `
+                uniform sampler2D u_buffer;
+                uniform vec2 u_res;
+                uniform vec2 u_mouse;
+                uniform float u_time;
+                uniform float u_moving;
+
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / u_res;
+                    vec4 prev = texture2D(u_buffer, uv);
+                    
+                    float d = distance(uv * vec2(u_res.x/u_res.y, 1.0), u_mouse * vec2(u_res.x/u_res.y, 1.0));
+                    float strength = exp(-d * 15.0) * u_moving;
+                    
+                    vec3 color = vec3(
+                        0.5 + 0.5 * sin(u_time + uv.x),
+                        0.7 + 0.3 * cos(u_time * 0.5 + uv.y),
+                        0.9
+                    );
+
+                    gl_FragColor = mix(prev * 0.98, vec4(color, 1.0), strength * 0.4);
+                }
+            `;
+
+            simMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    u_buffer: { value: null },
+                    u_res: { value: new THREE.Vector2(width, height) },
+                    u_mouse: { value: mouse },
+                    u_time: { value: 0 },
+                    u_moving: { value: 0 }
+                },
+                vertexShader: `void main(){ gl_Position = vec4(position, 1.0); }`,
+                fragmentShader: simFS
+            });
+
+            simScene = new THREE.Scene();
+            simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMaterial));
+
+            drawMaterial = new THREE.ShaderMaterial({
+                uniforms: { u_tex: { value: null } },
+                vertexShader: `void main(){ gl_Position = vec4(position, 1.0); }`,
+                fragmentShader: `
+                    uniform sampler2D u_tex;
+                    void main() {
+                        vec2 uv = gl_FragCoord.xy / vec2(${width.toFixed(1)}, ${height.toFixed(1)});
+                        vec4 c = texture2D(u_tex, uv);
+                        gl_FragColor = mix(vec4(1.0), c, length(c.rgb));
+                    }
+                `
+            });
+
+            drawScene = new THREE.Scene();
+            drawScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), drawMaterial));
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            simMaterial.uniforms.u_buffer.value = targetA.texture;
+            simMaterial.uniforms.u_time.value = time;
+            simMaterial.uniforms.u_mouse.value = mouse;
+            simMaterial.uniforms.u_moving.value = isMoving;
+
+            renderer.setRenderTarget(targetB);
+            renderer.render(simScene, camera);
+            renderer.setRenderTarget(null);
+
+            drawMaterial.uniforms.u_tex.value = targetB.texture;
+            renderer.render(drawScene, camera);
+
+            let temp = targetA; targetA = targetB; targetB = temp;
+            isMoving *= 0.95;
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.set(e.clientX / window.innerWidth, 1 - e.clientY / window.innerHeight);
+            isMoving = 1.0;
+        });
+
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth; const h = window.innerHeight;
+            renderer.setSize(w, h);
+            simMaterial.uniforms.u_res.value.set(w, h);
+            targetA.setSize(w, h); targetB.setSize(w, h);
+        });
+
+        initFluid();
+
+        // Contact Form Feedback
+        document.getElementById('contactForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = "SUCCESS!";
+            btn.style.background = "#70e8e0";
+            setTimeout(() => {
+                e.target.reset();
+                btn.innerText = "SEND MESSAGE";
+                btn.style.background = "#ff8cb6";
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
